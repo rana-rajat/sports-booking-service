@@ -7,15 +7,11 @@ A dockerized Spring Boot backend service for managing sports venues, time slots,
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Features](#features)
-- [Setup & Deployment](#setup--deployment)
-- [API Documentation](#api-documentation)
+- [API Endpoints](#api-endpoints)
 - [Architecture](#architecture)
 - [Concurrency & Safety](#concurrency--safety)
+- [Setup & Deployment](#setup--deployment)
 - [Development](#development)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Overview
 

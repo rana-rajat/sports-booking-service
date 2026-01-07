@@ -218,16 +218,6 @@ docker-compose down
 docker-compose down -v
 ```
 
-### Access
-
-- **API Base URL**: http://localhost:8080
-- **MySQL Database**
-  - Host: localhost
-  - Port: 3306
-  - Username: `root`
-  - Password: `root`
-  - Database: `sports_booking`
-
 ### Local Development
 
 ```bash

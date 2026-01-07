@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "Sports Booking API",
+    "description": "Complete API collection for Sports Venue Availability & Booking Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Venues",
+      "item": [
+        {
+          "name": "Create Venue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Central Sports Complex\",\n  \"location\": \"Downtown District\",\n  \"sportId\": \"cricket\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venues",
+              "host": ["{{base_url}}"],
+              "path": ["venues"]
+            },
+            "description": "Create a new venue"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Venues",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/venues",
+              "host": ["{{base_url}}"],
+              "path": ["venues"]
+            },
+            "description": "Retrieve all venues"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Venue by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/venues/1",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "1"]
+            },
+            "description": "Retrieve a specific venue"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Venue",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/venues/1",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "1"]
+            },
+            "description": "Delete a venue"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Slots",
+      "item": [
+        {
+          "name": "Add Slot to Venue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"2024-01-15 09:00:00\",\n  \"endTime\": \"2024-01-15 10:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venues/1/slots",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "1", "slots"]
+            },
+            "description": "Add a time slot to a venue"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Overlapping Slot (Should Fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"2024-01-15 09:30:00\",\n  \"endTime\": \"2024-01-15 10:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/venues/1/slots",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "1", "slots"]
+            },
+            "description": "Try to add an overlapping slot - should fail with 409 Conflict"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Availability",
+      "item": [
+        {
+          "name": "Get Available Venues",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/venues/available?startTime=2024-01-15 09:00:00&endTime=2024-01-15 10:00:00&sportId=cricket",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "available"],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "2024-01-15 09:00:00"
+                },
+                {
+                  "key": "endTime",
+                  "value": "2024-01-15 10:00:00"
+                },
+                {
+                  "key": "sportId",
+                  "value": "cricket"
+                }
+              ]
+            },
+            "description": "Get available venues and slots for given time range and sport"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Available Venues (Without Sport Filter)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/venues/available?startTime=2024-01-15 09:00:00&endTime=2024-01-15 10:00:00",
+              "host": ["{{base_url}}"],
+              "path": ["venues", "available"],
+              "query": [
+                {
+                  "key": "startTime",
+                  "value": "2024-01-15 09:00:00"
+                },
+                {
+                  "key": "endTime",
+                  "value": "2024-01-15 10:00:00"
+                }
+              ]
+            },
+            "description": "Get available venues without sport filter"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotId\": 1,\n  \"userName\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Create a new booking"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Retrieve all bookings"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/bookings/1",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1"]
+            },
+            "description": "Retrieve a specific booking"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/bookings/1/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1", "cancel"]
+            },
+            "description": "Cancel a booking"
+          },
+          "response": []
+        },
+        {
+          "name": "Double Booking Attempt (Should Fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotId\": 1,\n  \"userName\": \"Jane Smith\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["bookings"]
+            },
+            "description": "Try to book an already booked slot - should fail with 409 Conflict"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

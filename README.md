@@ -2,289 +2,228 @@
 
 A dockerized Spring Boot backend service for managing sports venues, time slots, and bookings with availability checks and conflict prevention. This system simulates a real-world sports ground/turf booking platform.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Setup & Deployment](#setup--deployment)
+- [API Documentation](#api-documentation)
+- [Architecture](#architecture)
+- [Concurrency & Safety](#concurrency--safety)
+- [Development](#development)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+This project provides a complete sports venue booking system with:
+- **Venue Management** - Create and manage sports venues
+- **Slot Management** - Schedule time slots with automatic overlap detection
+- **Availability Checking** - Real-time venue availability based on time and sport
+- **Booking System** - Secure booking with double-booking prevention
+- **Concurrency Safety** - Pessimistic locking and transaction management
+
 ## Tech Stack
 
 - **Java 17** - Spring Boot 3.5.9
-- **MySQL 8.0** - Relational database
-- **Docker & Docker Compose** - Containerization
-- **Maven** - Build tool
+- **MySQL 8.0** - Relational database with optimized schema
+- **Docker & Docker Compose** - Containerization and orchestration
+- **Maven** - Build and dependency management
 - **REST APIs** - JSON-based communication
-- **Hibernate JPA** - ORM framework
-- **Lombok** - Code generation
+- **Hibernate JPA** - Object-relational mapping
+- **Postman** - API testing and documentation
 
-## Core Features
+## Features
 
-1. **Venue Management** - Create, list, view, and delete sports venues
-2. **Slot Management** - Add time slots per venue with overlap prevention
-3. **Availability API** - Fetch available venues for a given time range & sport
-4. **Booking System** - Book, view, and cancel slots with double-booking prevention
-5. **Sport Management** - Sync sports from external API (https://stapubox.com/sportslist/)
+✅ **Venue Management**
+- Create, list, view, and delete venues
+- Support for multiple sports per venue
 
-## Key Assumptions
+✅ **Slot Management**
+- Add time slots with automatic overlap detection
+- No concurrent slots for same time range
+- Flexible slot status tracking
 
-1. **One Booking per Slot** - Each booking corresponds to exactly one time slot
-2. **Immutable Slot Time** - Once a slot is booked, the time range cannot be modified
-3. **Cancelled Booking Frees Slot** - When a booking is cancelled, the slot becomes available immediately
-4. **Single Database Instance** - No external caching layer; all state managed in MySQL
-5. **Pessimistic Locking** - Concurrent bookings use database locks to prevent race conditions
-6. **Sport Sync on Startup** - Sports are fetched from external API during application startup
-7. **Timezone Aware** - All timestamps stored in UTC format
+✅ **Availability API**
+- Find available venues for specific time range and sport
+- Real-time availability checks
 
-## Database Schema
+✅ **Booking System**
+- Create, view, and cancel bookings
+- Booking status tracking (CONFIRMED, CANCELLED)
 
-### Indexes for Performance
+✅ **Double-Booking Protection**
+- Pessimistic locking mechanism
+- Status validation before booking
+- Atomic operations for data consistency
+
+✅ **Sport Management**
+- Dynamic sport syncing from external API (https://stapubox.com/sportslist/)
+- No hardcoded sports data
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/venues` | Create new venue |
+| GET | `/venues` | List all venues |
+| GET | `/venues/{id}` | Get venue by ID |
+| DELETE | `/venues/{id}` | Delete venue |
+| POST | `/venues/{venueId}/slots` | Add time slot to venue |
+| GET | `/venues/available` | Find available venues (query params: startTime, endTime, sport) |
+| POST | `/bookings` | Create new booking |
+| GET | `/bookings` | List all bookings |
+| GET | `/bookings/{id}` | Get booking by ID |
+| PUT | `/bookings/{id}/cancel` | Cancel booking |
+
+## Architecture
 
 ```
-Slot Table:
-- idx_venue_id (venue_id)
-- idx_status (status)
-- idx_venue_time (venue_id, start_time, end_time)
-- idx_slot_time_range (start_time, end_time)
+┌─────────────────────────────────────────────────────────────┐
+│                    REST API LAYER                           │
+│  VenueController | SlotController | BookingController      │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                    SERVICE LAYER                            │
+│  VenueService | SlotService | BookingService |             │
+│  AvailabilityService | SportSyncService                     │
+│                                                             │
+│  ✅ Business Logic  ✅ Validation  ✅ Concurrency Safety  │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                REPOSITORY LAYER (Data Access)              │
+│  Custom JPA queries | Pessimistic locking | Transactions   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                  MYSQL DATABASE                            │
+│  Sport | Venue | Slot | Booking                           │
+│  ✅ 11 Indexes  ✅ FK Constraints  ✅ Unique Constraints  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Booking Table:
-- idx_slot_id (slot_id)
-- idx_user_name (user_name)
-- idx_booking_status (status)
+### Project Structure
+
+```
+sports-booking/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/sports_booking/
+│   │   │   ├── SportsBookingApplication.java
+│   │   │   ├── controller/
+│   │   │   │   ├── BookingController.java
+│   │   │   │   ├── SlotController.java
+│   │   │   │   └── VenueController.java
+│   │   │   ├── service/
+│   │   │   │   ├── AvailabilityService.java
+│   │   │   │   ├── BookingService.java
+│   │   │   │   ├── SlotService.java
+│   │   │   │   ├── SportSyncService.java
+│   │   │   │   └── VenueService.java
+│   │   │   ├── repository/
+│   │   │   │   ├── BookingRepository.java
+│   │   │   │   ├── SlotRepository.java
+│   │   │   │   ├── SportRepository.java
+│   │   │   │   └── VenueRepository.java
+│   │   │   ├── entity/
+│   │   │   │   ├── Booking.java
+│   │   │   │   ├── BookingStatus.java
+│   │   │   │   ├── Slot.java
+│   │   │   │   ├── SlotStatus.java
+│   │   │   │   ├── Sport.java
+│   │   │   │   └── Venue.java
+│   │   │   ├── dto/
+│   │   │   │   ├── AvailableVenueDTO.java
+│   │   │   │   ├── BookingDTO.java
+│   │   │   │   ├── CreateBookingRequest.java
+│   │   │   │   ├── CreateSlotRequest.java
+│   │   │   │   ├── CreateVenueRequest.java
+│   │   │   │   ├── SlotDTO.java
+│   │   │   │   └── VenueDTO.java
+│   │   │   └── exception/
+│   │   │       ├── BookingException.java
+│   │   │       ├── GlobalExceptionHandler.java
+│   │   │       ├── ResourceNotFoundException.java
+│   │   │       └── SlotOverlapException.java
+│   │   └── resources/
+│   │       └── application.yml
+│   └── test/
+│       └── java/com/example/sports_booking/
+│           └── SportsBookingApplicationTests.java
+├── Dockerfile
+├── docker-compose.yml
+├── pom.xml
+├── init.sql
+└── README.md
 ```
 
 ## Concurrency & Safety
 
-**Double Booking Prevention:**
-- Pessimistic WRITE locking on slot during booking transaction
-- Double-check pattern in BookingService.book()
-- @Transactional ensures ACID compliance
-- Slot status atomic check-and-set operation
+### Double Booking Prevention
+- **Pessimistic WRITE locking** on slot during booking transaction
+- **Double-check pattern** in BookingService.book()
+- **@Transactional annotation** ensures ACID compliance
+- **Atomic check-and-set** operation on slot status
 
-**Conflict Resolution:**
-- Unique constraint prevents duplicate slot creation for same time range
-- Foreign key constraints maintain referential integrity
-- Cascading delete on venue deletion
-- Restrict delete on slot with active bookings
+### Slot Overlap Prevention
+- Pre-insert overlap query check
+- Database UNIQUE constraint: (venue_id, start_time, end_time)
+- Application-level validation with SlotOverlapException
+- Impossible to create overlapping slots
 
-## API Endpoints
-
-### Venues
-
-#### Create Venue
-```
-POST /venues
-Content-Type: application/json
-
-{
-  "name": "Central Sports Complex",
-  "location": "Downtown",
-  "sportId": "cricket"
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "name": "Central Sports Complex",
-  "location": "Downtown",
-  "sportId": "cricket",
-  "createdAt": "2024-01-06 10:30:00",
-  "updatedAt": "2024-01-06 10:30:00"
-}
-```
-
-#### Get All Venues
-```
-GET /venues
-
-Response: 200 OK
-[
-  {
-    "id": 1,
-    "name": "Central Sports Complex",
-    "location": "Downtown",
-    "sportId": "cricket",
-    "createdAt": "2024-01-06 10:30:00",
-    "updatedAt": "2024-01-06 10:30:00"
-  }
-]
-```
-
-#### Get Single Venue
-```
-GET /venues/{venueId}
-
-Response: 200 OK
-{
-  "id": 1,
-  "name": "Central Sports Complex",
-  "location": "Downtown",
-  "sportId": "cricket",
-  "createdAt": "2024-01-06 10:30:00",
-  "updatedAt": "2024-01-06 10:30:00"
-}
-```
-
-#### Delete Venue
-```
-DELETE /venues/{venueId}
-
-Response: 204 No Content
-```
-
-### Slots
-
-#### Add Slot to Venue
-```
-POST /venues/{venueId}/slots
-Content-Type: application/json
-
-{
-  "startTime": "2024-01-15 09:00:00",
-  "endTime": "2024-01-15 10:00:00"
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "venueId": 1,
-  "venueName": "Central Sports Complex",
-  "sportId": "cricket",
-  "startTime": "2024-01-15 09:00:00",
-  "endTime": "2024-01-15 10:00:00",
-  "status": "AVAILABLE",
-  "createdAt": "2024-01-06 10:30:00",
-  "updatedAt": "2024-01-06 10:30:00"
-}
-```
-
-### Availability
-
-#### Get Available Venues
-```
-GET /venues/available?startTime=2024-01-15 09:00:00&endTime=2024-01-15 10:00:00&sportId=cricket
-
-Query Parameters:
-- startTime (required, format: yyyy-MM-dd HH:mm:ss)
-- endTime (required, format: yyyy-MM-dd HH:mm:ss)
-- sportId (optional, filters by sport)
-
-Response: 200 OK
-[
-  {
-    "venueId": 1,
-    "venueName": "Central Sports Complex",
-    "location": "Downtown",
-    "sportId": "cricket",
-    "slotId": 1,
-    "slotStartTime": "2024-01-15 09:00:00",
-    "slotEndTime": "2024-01-15 10:00:00"
-  }
-]
-```
-
-### Bookings
-
-#### Create Booking
-```
-POST /bookings
-Content-Type: application/json
-
-{
-  "slotId": 1,
-  "userName": "John Doe"
-}
-
-Response: 201 Created
-{
-  "id": 1,
-  "slotId": 1,
-  "venueId": 1,
-  "venueName": "Central Sports Complex",
-  "userName": "John Doe",
-  "slotStartTime": "2024-01-15 09:00:00",
-  "slotEndTime": "2024-01-15 10:00:00",
-  "status": "CONFIRMED",
-  "createdAt": "2024-01-06 10:35:00",
-  "cancelledAt": null
-}
-```
-
-#### Get All Bookings
-```
-GET /bookings
-
-Response: 200 OK
-[
-  {
-    "id": 1,
-    "slotId": 1,
-    "venueId": 1,
-    "venueName": "Central Sports Complex",
-    "userName": "John Doe",
-    "slotStartTime": "2024-01-15 09:00:00",
-    "slotEndTime": "2024-01-15 10:00:00",
-    "status": "CONFIRMED",
-    "createdAt": "2024-01-06 10:35:00",
-    "cancelledAt": null
-  }
-]
-```
-
-#### Get Single Booking
-```
-GET /bookings/{bookingId}
-
-Response: 200 OK
-{
-  "id": 1,
-  "slotId": 1,
-  "venueId": 1,
-  "venueName": "Central Sports Complex",
-  "userName": "John Doe",
-  "slotStartTime": "2024-01-15 09:00:00",
-  "slotEndTime": "2024-01-15 10:00:00",
-  "status": "CONFIRMED",
-  "createdAt": "2024-01-06 10:35:00",
-  "cancelledAt": null
-}
-```
-
-#### Cancel Booking
-```
-PUT /bookings/{bookingId}/cancel
-
-Response: 204 No Content
-```
+### Data Consistency
+- ACID compliance via @Transactional
+- Foreign key constraints with cascade options
+- Timestamp tracking for audit trail
+- Complete data integrity
 
 ## Setup & Deployment
 
 ### Prerequisites
 
-- Docker & Docker Compose installed
-- Port 8080 (app) and 3306 (MySQL) available
-- Git (for cloning)
+- **Docker** version 20.10+
+- **Docker Compose** version 1.29+
+- **Git** (for repository cloning)
+- Ports 8080 (application) and 3306 (MySQL) must be available
+- Minimum 2GB RAM allocated to Docker
 
 ### Quick Start with Docker Compose
 
 ```bash
-# Navigate to project directory
+# 1. Clone the repository
+git clone <repository-url>
 cd sports-booking
 
-# Start all services
+# 2. Start all services
 docker-compose up -d
 
-# Verify services are running
+# 3. Verify services are running
 docker-compose ps
 
-# View app logs
+# 4. Check application logs
 docker-compose logs -f app
 
-# Stop services
+# 5. Test the API
+curl http://localhost:8080/venues
+
+# 6. Stop services
 docker-compose down
 
-# Stop and remove volumes (clean slate)
+# 7. Stop and remove all volumes (clean slate)
 docker-compose down -v
 ```
 
 ### Access
 
 - **API Base URL**: http://localhost:8080
-- **MySQL**: localhost:3306
+- **MySQL Database**
+  - Host: localhost
+  - Port: 3306
   - Username: `root`
   - Password: `root`
   - Database: `sports_booking`
@@ -292,92 +231,63 @@ docker-compose down -v
 ### Local Development
 
 ```bash
-# Build locally
+# Build the project locally
 mvn clean package
 
-# Run application
+# Run the application
 java -jar target/sports-booking-0.0.1-SNAPSHOT.jar
 
-# Run tests
+# Run unit tests
 mvn test
+
+# Run tests with coverage
+mvn clean test jacoco:report
 ```
 
-## Testing
-
-### Sample Test Scenarios
-
-#### Scenario 1: Successful Booking
-```bash
-# Create venue
-curl -X POST http://localhost:8080/venues \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Stadium A",
-    "location": "City Center",
-    "sportId": "cricket"
-  }'
-
-# Add slot
-curl -X POST http://localhost:8080/venues/1/slots \
-  -H "Content-Type: application/json" \
-  -d '{
-    "startTime": "2024-01-15 14:00:00",
-    "endTime": "2024-01-15 15:00:00"
-  }'
-
-# Book slot
-curl -X POST http://localhost:8080/bookings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "slotId": 1,
-    "userName": "Alice"
-  }'
-
-# Expected: 201 Created
-```
-
-#### Scenario 2: Double Booking Prevention
-```bash
-# Try to book same slot again (should fail with 409 Conflict)
-curl -X POST http://localhost:8080/bookings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "slotId": 1,
-    "userName": "Bob"
-  }'
-
-# Expected: 409 Conflict
-# "Slot is already booked"
-```
-
-#### Scenario 3: Slot Overlap Prevention
-```bash
-# Try to add overlapping slot (should fail with 409 Conflict)
-curl -X POST http://localhost:8080/venues/1/slots \
-  -H "Content-Type: application/json" \
-  -d '{
-    "startTime": "2024-01-15 14:30:00",
-    "endTime": "2024-01-15 15:30:00"
-  }'
-
-# Expected: 409 Conflict
-# "Slot overlaps with existing slots for venue: Stadium A"
-```
-
-## Postman Collection
+### Postman Collection
 
 A complete Postman collection is available in `postman-collection.json` with:
-- All API endpoints
-- Pre-configured request/response examples
-- Environment variables for easy switching between local and production
-- Test scripts for validation
+- All API endpoints pre-configured
+- Request/response examples
+- Environment variables for easy switching
+- Pre-request scripts for validation
 
-### Import to Postman
-
+**To Import:**
 1. Open Postman
 2. Click **Import**
-3. Select `postman-collection.json`
-4. Start using the API
+3. Select `postman-collection.json` from the project root
+4. Use the **local** environment for testing
+5. Start making requests
+
+## Development
+
+### Build and Compile
+
+```bash
+# Clean and build
+mvn clean install
+
+# Build without running tests
+mvn clean install -DskipTests
+
+# Build specific module
+mvn clean install -pl :sports-booking
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=SportsBookingApplicationTests
+
+# Run with detailed output
+mvn test -X
+```
+
+**Last Updated**: January 7, 2026
 
 
 
